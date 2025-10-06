@@ -252,8 +252,8 @@ public class MongoGradeDataBase implements GradeDataBase {
     //             methods to help you write this code (copy-and-paste + edit as needed).
     //             https://www.postman.com/cloudy-astronaut-813156/csc207-grade-apis-demo/folder/isr2ymn/get-my-team
     public Team getMyTeam() {
-        final OkHttpClient client = new OkHttpClient().newBuilder().build();
-
+        final OkHttpClient client = new OkHttpClient().newBuilder()
+                .build();
         final Request request = new Request.Builder()
                 .url(String.format("%s/team", API_URL))
                 .method("GET", null)
@@ -261,28 +261,32 @@ public class MongoGradeDataBase implements GradeDataBase {
                 .addHeader(CONTENT_TYPE, APPLICATION_JSON)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try {
+            final Response response = client.newCall(request).execute();
             final JSONObject responseBody = new JSONObject(response.body().string());
 
+            // Check if the response status code is SUCCESS (200)
             if (responseBody.getInt(STATUS_CODE) == SUCCESS_CODE) {
-                final JSONObject teamJson = responseBody.getJSONObject("team");
-                final String teamName = teamJson.getString(NAME);
+                // Extract team details from the response JSON
+                final JSONObject team = responseBody.getJSONObject("team");
+                final JSONArray membersArray = team.getJSONArray("members");
 
-                final JSONArray membersArray = teamJson.getJSONArray("members");
+                // Create a list of members
                 final String[] members = new String[membersArray.length()];
                 for (int i = 0; i < membersArray.length(); i++) {
                     members[i] = membersArray.getString(i);
                 }
 
+                // Return a Team object
                 return Team.builder()
-                        .name(teamName)
+                        .name(team.getString(NAME))
                         .members(members)
                         .build();
             } else {
-                throw new RuntimeException(responseBody.getString(MESSAGE));
+                throw new RuntimeException("Failed to get team information: " + responseBody.getString(MESSAGE));
             }
-        } catch (IOException | JSONException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | JSONException event) {
+            throw new RuntimeException("Error while retrieving team: ", event);
         }
     }
 }
